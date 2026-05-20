@@ -1,22 +1,22 @@
 const pool = require('../config/db');
 
-// 1. BROWSE: Consulta la base de datos para traer la lista completa de estudiantes ordenados por ID.
+// obtenerTodos: Consulta la base de datos para traer la lista completa de alumnos ordenados por su ID.
 const obtenerTodos = async () => {
   const resultado = await pool.query('SELECT * FROM estudiantes ORDER BY id_estudiante ASC');
   return resultado.rows;
 };
  
-// 2. READ: Busca un estudiante específico por su ID. Usamos parámetros ($1) para proteger la consulta de ataques SQL.
+// obtenerPorId: Busca a un alumno específico según su ID. Usamos parámetros ($1) para asegurar 
+// la consulta y proteger el sistema contra inyecciones SQL.
 const obtenerPorId = async (id) => {
   const resultado = await pool.query('SELECT * FROM estudiantes WHERE id_estudiante = $1', [id]);
   return resultado.rows[0];
 };
 
-// 3. ADD: Registra un nuevo estudiante en la base de datos con los datos que llegan del formulario.
+// crear: Inserta un nuevo registro en la tabla de estudiantes con los datos que llegan del frontend, 
+// asignándole un estado activo inicial y guardando la fecha y hora exacta de la operación.
 const crear = async (datos) => {
   const { documento, apellido, nombres, email, fecha_nacimiento } = datos;
-  
-  // Guardamos el registro asignándole un estado activo (1) y la fecha y hora exacta de la creación.
   const consulta = `
     INSERT INTO estudiantes (documento, apellido, nombres, email, fecha_nacimiento, activo, id_usuario_modificacion, fecha_hora_modificacion) 
     VALUES ($1, $2, $3, $4, $5, 1, 1, CURRENT_TIMESTAMP) RETURNING *
@@ -26,7 +26,8 @@ const crear = async (datos) => {
   return resultado.rows[0];
 };
 
-// 4. EDIT: Modifica los datos de un estudiante existente según su ID y actualiza el registro de modificación.
+// actualizar: Modifica los datos de un alumno existente en base a su ID y registra el momento 
+// exacto en el que se realizó la actualización.
 const actualizar = async (id, datos) => {
   const { documento, apellido, nombres, email, fecha_nacimiento} = datos;
   const consulta = `
@@ -40,8 +41,8 @@ const actualizar = async (id, datos) => {
   return resultado.rows[0];
 };
 
-// 5. DELETE: Aplicamos una baja lógica (activo = 0) en lugar de borrar el registro físicamente. 
-// Esto evita que se rompa el historial si el alumno ya está asociado a un curso o nota.
+// eliminar: Realiza una baja lógica cambiando el estado del alumno a inactivo (activo = 0). 
+// Hacemos esto en lugar de borrarlo físicamente para resguardar la integridad de los datos históricos de la BD.
 const eliminar = async (id) => {
   const consulta = `
     UPDATE estudiantes 
@@ -54,7 +55,8 @@ const eliminar = async (id) => {
   return resultado.rows[0];
 };
 
-// 6. RESTAURAR: Permite reactivar la cuenta de un estudiante (activo = 1) si fue dado de baja previamente.
+// restaurar: Revierte la baja lógica volviendo a activar al alumno (activo = 1) en caso de que 
+// necesite ser reincorporado al sistema.
 const restaurar = async (id) => {
   const consulta = `
     UPDATE estudiantes 
