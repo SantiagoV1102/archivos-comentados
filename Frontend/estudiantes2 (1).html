@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Estudiantes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar { margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,.1); }
+        .table-responsive { background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,.05); }
+        .badge-activo { background-color: #198754; color: white; padding: 0.4em 0.6em; border-radius: 4px; font-size: 0.85em; }
+        .badge-baja { background-color: #dc3545; color: white; padding: 0.4em 0.6em; border-radius: 4px; font-size: 0.85em; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand" href="#">
+            <img src="logo_fcad.png" alt="Logo FCAD UNER" style="height: 65px; object-fit: contain;">
+        </a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav ms-5 me-auto">
+                <li class="nav-item"><a class="nav-link active" href="#">Estudiantes</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Listado de Estudiantes</h2>
+        <button class="btn btn-primary" onclick="abrirModalCrear()">
+            <i class="bi bi-person-plus-fill me-1"></i> Nuevo Estudiante
+        </button>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" id="inputBusqueda" class="form-control" placeholder="Buscar por apellido, documento..." onkeyup="buscarEstudiantes()">
+            </div>
+        </div>
+        <div class="col-md-4 d-flex align-items-center gap-2">
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="toggleInactivos" onchange="renderizarVista()">
+                <label class="form-check-label" for="toggleInactivos">Mostrar inactivos</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Documento</th>
+                    <th>Apellido</th>
+                    <th>Nombres</th>
+                    <th>Email</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaEstudiantes"></tbody>
+        </table>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <small id="infoPaginacion" class="text-muted"></small>
+            <div class="btn-group" role="group">
+                <button class="btn btn-outline-secondary btn-sm" onclick="cambiarPagina(-1)">Anterior</button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="cambiarPagina(1)">Siguiente</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEstudiante" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitulo">Nuevo Estudiante</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="alertaModal" class="alert alert-danger d-none"></div>
+                <div>
+                    <input type="hidden" id="estudianteId">
+                    <div class="mb-3">
+                        <label class="form-label">Documento *</label>
+                        <input type="text" class="form-control" id="documento" required>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label class="form-label">Apellido *</label>
+                            <input type="text" class="form-control" id="apellido" required>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Nombres *</label>
+                            <input type="text" class="form-control" id="nombres" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fecha de Nacimiento</label>
+                        <input type="date" class="form-control" id="fechaNacimiento">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarEstudiante()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalDetalle" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title"><i class="bi bi-info-circle text-info me-2"></i>Detalle del Estudiante</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detalleBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    const API_URL = 'http://localhost:3000/estudiantes';
+
+    // Estado interno para controlar los filtros y la paginación local
+    let todosLosEstudiantes = []; 
+    let estado = {
+        pagina: 1,
+        limite: 10,
+        busqueda: ''
+    };
+
+    const modalEstudiante = new bootstrap.Modal(document.getElementById('modalEstudiante'));
+    const modalDetalle = new bootstrap.Modal(document.getElementById('modalDetalle'));
+
+    // Alertas tipo Toast de SweetAlert que aparecen arriba a la derecha
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+    });
+
+    // Muestra el spinner de carga animado adentro de la tabla
+    const mostrarLoading = (visible) => {
+        const tbody = document.getElementById('tablaEstudiantes');
+        if (visible) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-5">
+                        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                    </td>
+                </tr>`;
+        }
+    };
+
+    // Pide el array completo de estudiantes al backend mediante fetch
+    const cargarEstudiantes = async () => {
+        mostrarLoading(true);
+        try {
+            const respuesta = await fetch(API_URL);
+            if (!respuesta.ok) throw new Error('Error al obtener datos');
+            todosLosEstudiantes = await respuesta.json();
+            renderizarVista();
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'No se pudo conectar con el servidor. ¿Está corriendo node index.js?', 'error');
+        }
+    };
+
+    // Filtra el array local por texto y por estado (Activo/Inactivo)
+    const renderizarVista = () => {
+        const busqueda = estado.busqueda.toLowerCase();
+        const mostrarInactivos = document.getElementById('toggleInactivos').checked;
+
+        const filtrados = todosLosEstudiantes.filter(est => {
+            const coincideBusqueda =
+                est.apellido.toLowerCase().includes(busqueda) ||
+                est.documento.toString().includes(busqueda) ||
+                est.nombres.toLowerCase().includes(busqueda);
+
+            const coincideEstado = mostrarInactivos ? est.estado === 'Inactivo' : est.estado === 'Activo';
+
+            return coincideBusqueda && coincideEstado;
+        });
+
+        // Calcula cuántas páginas quedan según los registros filtrados
+        const total = filtrados.length;
+        const totalPaginas = Math.max(1, Math.ceil(total / estado.limite));
+        if (estado.pagina > totalPaginas) estado.pagina = totalPaginas;
+
+        const inicio = (estado.pagina - 1) * estado.limite;
+        const pagina = filtrados.slice(inicio, inicio + estado.limite);
+
+        renderizarTabla(pagina);
+        actualizarPaginacion(total, totalPaginas);
+    };
+
+    // Arma dinámicamente las filas de la tabla con los botones de editar, ver y borrar/restaurar
+    const renderizarTabla = (estudiantes) => {
+        const tbody = document.getElementById('tablaEstudiantes');
+        tbody.innerHTML = '';
+
+        if (estudiantes.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No se encontraron estudiantes.</td></tr>';
+            return;
+        }
+
+        estudiantes.forEach(est => {
+            const badge = est.estado === 'Activo'
+                ? '<span class="badge-activo">Activo</span>'
+                : '<span class="badge-baja">Dado de baja</span>';
+
+            const botonAccion = est.estado === 'Activo'
+                ? `<button class="btn btn-sm btn-outline-danger ms-1" onclick="darDeBaja(${est.id})" title="Dar de baja"><i class="bi bi-trash"></i></button>`
+                : `<button class="btn btn-sm btn-outline-success ms-1" onclick="restaurar(${est.id})" title="Restaurar"><i class="bi bi-arrow-counterclockwise"></i></button>`;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${est.documento}</strong></td>
+                <td>${est.apellido}</td>
+                <td>${est.nombres}</td>
+                <td>${est.email}</td>
+                <td>${badge}</td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-info me-1" onclick="verDetalle(${est.id})" title="Ver detalle"><i class="bi bi-eye"></i></button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="editarEstudiante(${est.id})" title="Editar"><i class="bi bi-pencil"></i></button>
+                    ${botonAccion}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    };
+
+    // Trae el registro crudo del estudiante por id y arma el modal de detalles
+    const verDetalle = async (id) => {
+        try {
+            const respuesta = await fetch(`${API_URL}/${id}`);
+            if (!respuesta.ok) throw new Error('No encontrado');
+            const est = await respuesta.json();
+
+            const fechaFormateada = est.fecha_nacimiento
+            ? est.fecha_nacimiento.split ('T')[0]
+            : 'No registrada';
+            const estadoBadge = est.activo === 1
+                ? '<span class="badge bg-success">Activo</span>'
+                : '<span class="badge bg-danger">Inactivo</span>';
+
+            document.getElementById('detalleBody').innerHTML = `
+                <div class="text-center mb-4">
+                    <i class="bi bi-person-vcard text-secondary" style="font-size: 4rem;"></i>
+                    <h4 class="mt-2">${est.nombres} ${est.apellido}</h4>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong><i class="bi bi-credit-card me-2"></i>Documento:</strong> ${est.documento}</li>
+                    <li class="list-group-item"><strong><i class="bi bi-envelope me-2"></i>Email:</strong> ${est.email}</li>
+                    <li class="list-group-item"><strong><i class="bi bi-calendar3 me-2"></i>Nacimiento:</strong> ${fechaFormateada}</li>
+                    <li class="list-group-item"><strong><i class="bi bi-activity me-2"></i>Estado:</strong> ${estadoBadge}</li>
+                </ul>
+            `;
+            modalDetalle.show();
+        } catch (error) {
+            Swal.fire('Error', 'No se pudo obtener el detalle del estudiante.', 'error');
+        }
+    };
+
+    // Captura el texto del input y actualiza la vista aplicando una breve espera (debounce)
+    let timeoutBusqueda;
+    const buscarEstudiantes = () => {
+        clearTimeout(timeoutBusqueda);
+        timeoutBusqueda = setTimeout(() => {
+            estado.busqueda = document.getElementById('inputBusqueda').value;
+            estado.pagina = 1;
+            renderizarVista(); 
+        }, 300);
+    };
+
+    // Cambia el número de la página actual hacia adelante o atrás
+    const cambiarPagina = (direccion) => {
+        const busqueda = estado.busqueda.toLowerCase();
+        const filtrados = todosLosEstudiantes.filter(est =>
+            est.apellido.toLowerCase().includes(busqueda) ||
+            est.documento.toString().includes(busqueda) ||
+            est.nombres.toLowerCase().includes(busqueda)
+        );
+        const totalPaginas = Math.max(1, Math.ceil(filtrados.length / estado.limite));
+        const nuevaPagina = estado.pagina + direccion;
+        if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas) {
+            estado.pagina = nuevaPagina;
+            renderizarVista();
+        }
+    };
+
+    // Actualiza el texto con el estado de las páginas abajo de la tabla
+    const actualizarPaginacion = (total, totalPaginas) => {
+        document.getElementById('infoPaginacion').textContent =
+            `Página ${estado.pagina} de ${totalPaginas} (Total: ${total} estudiantes)`;
+    };
+
+    // Resetea y limpia todos los campos del modal para registrar un nuevo alumno
+    const abrirModalCrear = () => {
+        document.getElementById('estudianteId').value = '';
+        document.getElementById('documento').value = '';
+        document.getElementById('apellido').value = '';
+        document.getElementById('nombres').value = '';
+        document.getElementById('email').value = '';
+        document.getElementById('fechaNacimiento').value = '';
+        document.getElementById('modalTitulo').textContent = 'Nuevo Estudiante';
+        ocultarAlertaModal();
+        modalEstudiante.show();
+    };
+
+    // Envía los datos con POST (si es nuevo) o PUT (si tiene ID) y procesa los errores del validador
+    const guardarEstudiante = async () => {
+        ocultarAlertaModal();
+        const id = document.getElementById('estudianteId').value;
+        const metodo = id ? 'PUT' : 'POST';
+        const url = id ? `${API_URL}/${id}` : API_URL;
+
+        let fecha = document.getElementById('fechaNacimiento').value;
+        if (fecha === '') fecha = null;
+
+        const datos = {
+            documento: document.getElementById('documento').value,
+            apellido: document.getElementById('apellido').value,
+            nombres: document.getElementById('nombres').value,
+            email: document.getElementById('email').value,
+            fecha_nacimiento: fecha
+        };
+
+        try {
+            const respuesta = await fetch(url, {
+                method: metodo,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            });
+
+            if (!respuesta.ok) {
+                const errorJson = await respuesta.json();
+                mostrarAlertaModal(errorJson.error || 'Error al guardar');
+                return;
+            }
+
+            modalEstudiante.hide();
+            await cargarEstudiantes();
+            Toast.fire({ icon: 'success', title: '¡Datos guardados exitosamente!' });
+        } catch (error) {
+            mostrarAlertaModal('No se pudo conectar con el servidor.');
+        }
+    };
+
+    // Busca los datos crudos del estudiante por id y carga el modal del formulario para editar
+    const editarEstudiante = async (id) => {
+        try {
+            const respuesta = await fetch(`${API_URL}/${id}`);
+            if (!respuesta.ok) throw new Error();
+            const estudiante = await respuesta.json();
+
+            document.getElementById('estudianteId').value = estudiante.id_estudiante ?? estudiante.id;
+            document.getElementById('documento').value = estudiante.documento;
+            document.getElementById('apellido').value = estudiante.apellido;
+            document.getElementById('nombres').value = estudiante.nombres;
+            document.getElementById('email').value = estudiante.email;
+
+            if (estudiante.fecha_nacimiento) {
+                document.getElementById('fechaNacimiento').value = estudiante.fecha_nacimiento.split('T')[0];
+            } else {
+                document.getElementById('fechaNacimiento').value = '';
+            }
+
+            document.getElementById('modalTitulo').textContent = 'Editar Estudiante';
+            ocultarAlertaModal();
+            modalEstudiante.show();
+        } catch (error) {
+            Swal.fire('Error', 'No se pudo obtener la información del estudiante.', 'error');
+        }
+    };
+
+    // Muestra alerta de confirmación y envía un DELETE para desactivar lógicamente al alumno
+    const darDeBaja = (id) => {
+        Swal.fire({
+            title: '¿Dar de baja?',
+            text: 'El estudiante pasará al listado de inactivos.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, dar de baja',
+            cancelButtonText: 'Cancelar'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                    await cargarEstudiantes();
+                    Toast.fire({ icon: 'success', title: 'Estudiante dado de baja' });
+                } catch (error) {
+                    Swal.fire('Error', 'No se pudo dar de baja al estudiante.', 'error');
+                }
+            }
+        });
+    };
+
+    // Muestra alerta de confirmación y envía un PATCH para volver a activar al alumno
+    const restaurar = (id) => {
+        Swal.fire({
+            title: '¿Restaurar estudiante?',
+            text: 'Volverá a aparecer en el listado activo.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, restaurar',
+            cancelButtonText: 'Cancelar'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    await fetch(`${API_URL}/${id}/activar`, { method: 'PATCH' });
+                    await cargarEstudiantes();
+                    Toast.fire({ icon: 'success', title: 'Estudiante restaurado' });
+                } catch (error) {
+                    Swal.fire('Error', 'No se pudo restaurar al estudiante.', 'error');
+                }
+            }
+        });
+    };
+
+    // Controla el cartel de error interno que aparece arriba adentro del formulario modal
+    const mostrarAlertaModal = (mensaje) => {
+        const alerta = document.getElementById('alertaModal');
+        alerta.textContent = mensaje;
+        alerta.classList.remove('d-none');
+    };
+    const ocultarAlertaModal = () => {
+        document.getElementById('alertaModal').classList.add('d-none');
+    };
+
+    // Carga inicial automatica de datos al abrir la pestaña del navegador
+    cargarEstudiantes();
+</script>
+</body>
+</html>
