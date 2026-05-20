@@ -1,12 +1,19 @@
+// Importamos el servicio que tiene la lógica de negocio
 const estudiantesService = require('../services/estudiantesService');
+
+// IMPORTAMOS EL NUEVO DTO
 const estudiantesTransform = require('../Transforms/estudiantesTransform');
 
-// obtenerTodos: Recibe la solicitud para listar alumnos, pide los datos al servicio y los procesa 
-// a través de un transformador antes de enviarlos limpios al cliente en formato JSON.
+// Obtiene todos los estudiantes y los pasa por el transformador
 const obtenerTodos = async (_req, res) => {
   try {
+    // 1. Pedimos los datos "crudos" al servicio
     const estudiantesCrudos = await estudiantesService.obtenerTodos();
+    
+    // 2. Pasamos los datos por el DTO para limpiarlos
     const estudiantesLimpios = estudiantesTransform.transformarListaEstudiantes(estudiantesCrudos);
+    
+    // 3. Enviamos la respuesta limpia al frontend
     res.json(estudiantesLimpios);
   } catch (error) {
     console.error("Error en BROWSE:", error.message);
@@ -14,8 +21,7 @@ const obtenerTodos = async (_req, res) => {
   }
 };
 
-// obtenerPorId: Solicita un alumno específico al servicio por su ID. Si no se encuentra, 
-// responde con un estado 404 para informar al frontend de manera clara.
+// Busca un estudiante específico por su ID
 const obtenerPorId = async (req, res) => {
   try {
     const { id } = req.params;
@@ -27,11 +33,40 @@ const obtenerPorId = async (req, res) => {
     res.json(estudiante);
   } catch (error) {
     console.error("Error en READ:", error.message);
-    res.status(500).json({ error: 'Error al obtener el estudiante' });
+    res.status(500).json({ error: 'Error al buscar el estudiante' });
   }
 };
 
-// eliminar: Se encarga de procesar la baja del estudiante e informa si la acción se completó correctamente.
+// Crea un nuevo estudiante y transforma la respuesta
+const crear = async (req, res) => {
+  try {
+    const nuevoEstudiante = await estudiantesService.crear(req.body);
+    // Se transforma antes de responder para mantener consistencia con el resto de endpoints.
+    res.status(201).json(estudiantesTransform.transformarEstudiante(nuevoEstudiante));
+  } catch (error) {
+    console.error("Error en ADD:", error.message);
+    res.status(500).json({ error: 'Error al crear el estudiante' });
+  }
+};
+
+// Actualiza los datos de un estudiante por su ID
+const actualizar = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const estudianteActualizado = await estudiantesService.actualizar(id, req.body);
+    
+    if (!estudianteActualizado) {
+      return res.status(404).json({ mensaje: 'Estudiante no encontrado para editar' });
+    }
+    // Se transforma para mantener consistencia con el resto de endpoints.
+    res.json(estudiantesTransform.transformarEstudiante(estudianteActualizado));
+  } catch (error) {
+    console.error("Error en EDIT:", error.message);
+    res.status(500).json({ error: 'Error al actualizar el estudiante' });
+  }
+};
+
+// Da de baja de manera lógica a un estudiante
 const eliminar = async (req, res) => {
   try {
     const { id } = req.params;
@@ -47,7 +82,7 @@ const eliminar = async (req, res) => {
   }
 };
 
-// restaurar: Procesa la reactivación del registro del alumno y confirma la operación.
+// Reactiva el registro de un estudiante que estaba inactivo
 const restaurar = async (req, res) => {
   try {
     const { id } = req.params;
@@ -63,4 +98,11 @@ const restaurar = async (req, res) => {
   }
 };
 
-module.exports = { obtenerTodos, obtenerPorId, eliminar, restaurar };
+module.exports = {
+  obtenerTodos,
+  obtenerPorId,
+  crear,
+  actualizar,
+  eliminar,
+  restaurar
+};
