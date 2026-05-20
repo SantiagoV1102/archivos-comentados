@@ -7,22 +7,26 @@ const router = express.Router();
 const estudiantesController = require('../controllers/estudiantesController');
 const estudiantesValidator = require('../validators/estudiantesValidator');
 
-// 1. BROWSE
+// obtenerTodos: Maneja la petición GET en la raíz. Devuelve el listado completo de los alumnos del sistema.
 router.get('/', estudiantesController.obtenerTodos);
 
-// 2. READ
+// obtenerPorId: Recibe un ID como parámetro en la URL para buscar y mostrar los detalles de un solo estudiante.
 router.get('/:id', estudiantesController.obtenerPorId);
 
-// 3. ADD 
+// crear: Procesa la creación de un nuevo estudiante mediante una petición POST. 
+// Primero pasa por el middleware de validación para controlar los datos y luego llega al controlador.
 router.post('/', estudiantesValidator.validarDatosEstudiante, estudiantesController.crear);
 
-// 4. EDIT
+// actualizar: Modifica los datos de un alumno existente mediante PUT usando su ID. 
+// También valida la estructura de los datos entrantes antes de impactar los cambios.
 router.put('/:id', estudiantesValidator.validarDatosEstudiante, estudiantesController.actualizar);
 
-// 5. DELETE
+// eliminar: Ejecuta la baja del estudiante mediante DELETE. El controlador se encargará 
+// de hacer la desactivación lógica en la base de datos en lugar de un borrado físico.
 router.delete('/:id', estudiantesController.eliminar);
 
-// 6. RESTAURAR
+// restaurar: Utiliza el método PATCH para realizar una modificación parcial en el estado del alumno, 
+// permitiendo reactivar su registro en el sistema.
 router.patch('/:id/activar', estudiantesController.restaurar);
 
 module.exports = router;
